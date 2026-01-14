@@ -3,6 +3,60 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Plus, MessageSquare, X, Menu, Paperclip, Image, FileText, Trash2 } from 'lucide-react';
 
+// Simple Markdown to HTML converter
+const parseMarkdown = (text) => {
+  if (!text) return '';
+  
+  let html = text;
+  
+  // Bold: **text** or __text__
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  
+  // Italic: *text* or _text_
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+  
+  // Code: `code`
+  html = html.replace(/`(.+?)`/g, '<code class="bg-neutral-700 px-1 py-0.5 rounded text-sm">$1</code>');
+  
+  // Links: [text](url)
+  html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:underline">$1</a>');
+  
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+  
+  return html;
+};
+
+// Component to render message with Markdown
+const MessageContent = ({ content }) => {
+  return (
+    <div 
+      className="markdown-content"
+      dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
+    />
+  );
+};
+
+// Component to display image attachments
+const ImageAttachment = ({ file }) => {
+  if (!file.data) return null;
+
+  // Construct proper data URL with base64 encoding
+  const imageUrl = `data:${file.type};base64,${file.data}`;
+
+  return (
+    <div className="mb-3 rounded-lg overflow-hidden border border-neutral-700">
+      <img 
+        src={imageUrl} 
+        alt={file.name}
+        className="max-w-full h-auto max-h-96 object-contain bg-neutral-900"
+      />
+    </div>
+  );
+};
+
 export default function ChatbotApp() {
   const [conversations, setConversations] = useState([
     { id: 1, title: 'New Conversation', messages: [] }
@@ -68,7 +122,7 @@ export default function ChatbotApp() {
       id: Date.now(),
       role: 'user',
       content: input,
-      files: files.map(f => ({ name: f.name, type: f.type, size: f.size })),
+      files: files.map(f => ({ name: f.name, type: f.type, size: f.size, data: f.data })),
       timestamp: new Date().toISOString()
     };
 
@@ -352,16 +406,20 @@ export default function ChatbotApp() {
                       : 'bg-neutral-800 text-neutral-100 rounded-2xl rounded-tl-sm border border-neutral-700'
                   } px-5 py-3 shadow-sm`}>
                     {msg.files && msg.files.length > 0 && (
-                      <div className="mb-2 space-y-1">
+                      <div className="mb-3">
                         {msg.files.map((file, i) => (
-                          <div key={i} className="flex items-center gap-2 text-sm opacity-90">
-                            {getFileIcon(file.type)}
-                            <span className="truncate">{file.name}</span>
-                          </div>
+                          file.type?.startsWith('image/') ? (
+                            <ImageAttachment key={i} file={file} />
+                          ) : (
+                            <div key={i} className="flex items-center gap-2 text-sm opacity-90 mb-2">
+                              {getFileIcon(file.type)}
+                              <span className="truncate">{file.name}</span>
+                            </div>
+                          )
                         ))}
                       </div>
                     )}
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <MessageContent content={msg.content} />
                   </div>
                 </div>
               ))}
@@ -387,15 +445,33 @@ export default function ChatbotApp() {
             {files.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {files.map((file, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-300 border border-neutral-700">
-                    {getFileIcon(file.type)}
-                    <span className="truncate max-w-[200px]">{file.name}</span>
-                    <button 
-                      onClick={() => removeFile(i)} 
-                      className="text-neutral-500 hover:text-neutral-300 ml-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                  <div key={i} className="relative group">
+                    {file.type?.startsWith('image/') ? (
+                      <div className="relative">
+                        <img 
+                          src={`data:${file.type};base64,${file.data}`}
+                          alt={file.name}
+                          className="h-20 w-20 object-cover rounded-lg border border-neutral-700"
+                        />
+                        <button 
+                          onClick={() => removeFile(i)} 
+                          className="absolute -top-2 -right-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3 text-neutral-300" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 bg-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-300 border border-neutral-700">
+                        {getFileIcon(file.type)}
+                        <span className="truncate max-w-[200px]">{file.name}</span>
+                        <button 
+                          onClick={() => removeFile(i)} 
+                          className="text-neutral-500 hover:text-neutral-300 ml-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -451,6 +527,19 @@ export default function ChatbotApp() {
           </div>
         </div>
       </div>
+      
+      <style jsx>{`
+        .markdown-content strong {
+          font-weight: 700;
+          color: #fafafa;
+        }
+        .markdown-content em {
+          font-style: italic;
+        }
+        .markdown-content a {
+          text-decoration: underline;
+        }
+      `}</style>
     </div>
   );
 }
