@@ -67,6 +67,7 @@ export default function ChatbotApp() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [storageLoaded, setStorageLoaded] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -223,21 +224,25 @@ export default function ChatbotApp() {
   };
 
   const clearAllConversations = () => {
-    if (confirm('Are you sure you want to delete all conversations? This cannot be undone.')) {
-      const newConv = {
-        id: Date.now(),
-        title: 'New Conversation',
-        messages: []
-      };
-      setConversations([newConv]);
-      setActiveConvId(newConv.id);
-      
-      try {
-        localStorage.removeItem('chatbot-data');
-      } catch (error) {
-        console.error('Error clearing storage:', error);
-      }
+    setShowClearModal(true);
+  };
+
+  const confirmClearAll = () => {
+    const newConv = {
+      id: Date.now(),
+      title: 'New Conversation',
+      messages: []
+    };
+    setConversations([newConv]);
+    setActiveConvId(newConv.id);
+    
+    try {
+      localStorage.removeItem('chatbot-data');
+    } catch (error) {
+      console.error('Error clearing storage:', error);
     }
+    
+    setShowClearModal(false);
   };
 
   const handleFileSelect = async (e) => {
@@ -321,6 +326,43 @@ export default function ChatbotApp() {
 
   return (
     <div className="flex h-screen bg-neutral-900">
+      {/* Clear All Confirmation Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-800 rounded-xl shadow-2xl max-w-md w-full border border-neutral-700 animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-neutral-100 mb-2">
+                    Clear All Conversations?
+                  </h3>
+                  <p className="text-sm text-neutral-400 leading-relaxed">
+                    This will permanently delete all your conversations and cannot be undone. Are you sure you want to continue?
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 px-4 py-2.5 bg-neutral-700 hover:bg-neutral-600 text-neutral-100 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmClearAll}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-neutral-950 border-r border-neutral-800 transition-all duration-300 overflow-hidden flex flex-col`}>
         <div className="p-4 border-b border-neutral-800 space-y-2">
@@ -442,40 +484,7 @@ export default function ChatbotApp() {
         {/* Input Area */}
         <div className="bg-neutral-900 border-t border-neutral-800 p-6">
           <div className="max-w-3xl mx-auto">
-            {files.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {files.map((file, i) => (
-                  <div key={i} className="relative group">
-                    {file.type?.startsWith('image/') ? (
-                      <div className="relative">
-                        <img 
-                          src={`data:${file.type};base64,${file.data}`}
-                          alt={file.name}
-                          className="h-20 w-20 object-cover rounded-lg border border-neutral-700"
-                        />
-                        <button 
-                          onClick={() => removeFile(i)} 
-                          className="absolute -top-2 -right-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3 text-neutral-300" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 bg-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-300 border border-neutral-700">
-                        {getFileIcon(file.type)}
-                        <span className="truncate max-w-[200px]">{file.name}</span>
-                        <button 
-                          onClick={() => removeFile(i)} 
-                          className="text-neutral-500 hover:text-neutral-300 ml-1"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+
             
             <div className="flex items-end gap-3">
               <input
