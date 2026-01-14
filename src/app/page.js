@@ -100,7 +100,7 @@ export default function ChatbotApp() {
   const [activeConvId, setActiveConvId] = useState(1);
   const [input, setInput] = useState('');
   const [files, setFiles] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [storageLoaded, setStorageLoaded] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -246,6 +246,7 @@ export default function ChatbotApp() {
     };
     setConversations(prev => [...prev, newConv]);
     setActiveConvId(newConv.id);
+    setSidebarOpen(false);
   };
 
   const deleteConversation = (id) => {
@@ -355,16 +356,36 @@ export default function ChatbotApp() {
   }
 
   return (
-    <div className="flex h-screen bg-neutral-900">
+    <div className="flex h-screen bg-neutral-900 overflow-hidden">
       <DeleteModal 
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={clearAllConversations}
       />
 
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-neutral-950 border-r border-neutral-800 transition-all duration-300 overflow-hidden flex flex-col`}>
+      <div className={`fixed md:relative inset-y-0 left-0 z-40 w-64 bg-neutral-950 border-r border-neutral-800 transition-transform duration-300 flex flex-col ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      } ${!sidebarOpen ? 'md:hidden' : ''}`}>
         <div className="p-4 border-b border-neutral-800 space-y-2">
+          {/* Close button for mobile - top right */}
+          <div className="flex md:hidden justify-end mb-2">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400"
+              aria-label="Close sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
           <button
             onClick={createNewConversation}
             className="w-full flex items-center gap-2 px-4 py-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-lg transition-colors text-neutral-200"
@@ -385,7 +406,10 @@ export default function ChatbotApp() {
           {conversations.map(conv => (
             <div
               key={conv.id}
-              onClick={() => setActiveConvId(conv.id)}
+              onClick={() => {
+                setActiveConvId(conv.id);
+                setSidebarOpen(false);
+              }}
               className={`group flex items-center gap-2 px-3 py-3 mb-2 rounded-lg cursor-pointer transition-colors ${
                 activeConvId === conv.id 
                   ? 'bg-neutral-800 border border-neutral-700 text-neutral-100' 
@@ -411,41 +435,41 @@ export default function ChatbotApp() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="bg-neutral-900 border-b border-neutral-800 px-6 py-4 flex items-center gap-4">
+        <div className="bg-neutral-900 border-b border-neutral-800 px-4 md:px-6 py-3 md:py-4 flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 hover:bg-neutral-800 rounded-lg transition-colors text-neutral-400"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-semibold text-neutral-100">
+          <h1 className="text-lg md:text-xl font-semibold text-neutral-100 truncate">
             {activeConv?.title || 'Chat'}
           </h1>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 md:py-6">
           {activeConv?.messages.length === 0 ? (
             <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
-                <h2 className="text-2xl font-semibold text-neutral-200 mb-2">Start a conversation</h2>
-                <p className="text-neutral-500">Send a message or upload an image to begin</p>
+              <div className="text-center px-4">
+                <MessageSquare className="w-12 h-12 md:w-16 md:h-16 text-neutral-700 mx-auto mb-3 md:mb-4" />
+                <h2 className="text-xl md:text-2xl font-semibold text-neutral-200 mb-2">Start a conversation</h2>
+                <p className="text-sm md:text-base text-neutral-500">Send a message or upload an image to begin</p>
               </div>
             </div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
               {activeConv?.messages.map(msg => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] ${
+                  <div className={`max-w-[85%] md:max-w-[80%] ${
                     msg.role === 'user'
                       ? 'bg-neutral-700 text-neutral-100 rounded-2xl rounded-tr-sm'
                       : msg.isError
                       ? 'bg-red-900/20 text-red-200 rounded-2xl rounded-tl-sm border border-red-800'
                       : 'bg-neutral-800 text-neutral-100 rounded-2xl rounded-tl-sm border border-neutral-700'
-                  } px-5 py-3 shadow-sm`}>
+                  } px-3 md:px-5 py-2.5 md:py-3 shadow-sm text-sm md:text-base`}>
                     {msg.files && msg.files.length > 0 && (
                       <div className="mb-3">
                         {msg.files.map((file, i) => (
@@ -466,7 +490,7 @@ export default function ChatbotApp() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-neutral-800 text-neutral-100 rounded-2xl rounded-tl-sm border border-neutral-700 px-5 py-3">
+                  <div className="bg-neutral-800 text-neutral-100 rounded-2xl rounded-tl-sm border border-neutral-700 px-3 md:px-5 py-2.5 md:py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-neutral-400 rounded-full animate-pulse" />
                       <div className="w-2 h-2 bg-neutral-400 rounded-full animate-pulse delay-75" />
@@ -481,10 +505,10 @@ export default function ChatbotApp() {
         </div>
 
         {/* Input Area */}
-        <div className="bg-neutral-900 border-t border-neutral-800 p-6">
+        <div className="bg-neutral-900 border-t border-neutral-800 p-3 md:p-6">
           <div className="max-w-3xl mx-auto">
             {files.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
+              <div className="mb-2 md:mb-3 flex flex-wrap gap-2">
                 {files.map((file, i) => (
                   <div key={i} className="relative group">
                     {file.type?.startsWith('image/') ? (
@@ -492,24 +516,24 @@ export default function ChatbotApp() {
                         <img 
                           src={`data:${file.type};base64,${file.data}`}
                           alt={file.name}
-                          className="h-20 w-20 object-cover rounded-lg border border-neutral-700"
+                          className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-lg border border-neutral-700"
                         />
                         <button 
                           onClick={() => removeFile(i)} 
-                          className="absolute -top-2 -right-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 rounded-full p-1 transition-opacity"
                         >
                           <X className="w-3 h-3 text-neutral-300" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 bg-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-300 border border-neutral-700">
+                      <div className="flex items-center gap-2 bg-neutral-800 rounded-lg px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm text-neutral-300 border border-neutral-700">
                         {getFileIcon(file.type)}
-                        <span className="truncate max-w-[200px]">{file.name}</span>
+                        <span className="truncate max-w-[120px] md:max-w-[200px]">{file.name}</span>
                         <button 
                           onClick={() => removeFile(i)} 
                           className="text-neutral-500 hover:text-neutral-300 ml-1"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3 md:w-4 md:h-4" />
                         </button>
                       </div>
                     )}
@@ -518,7 +542,7 @@ export default function ChatbotApp() {
               </div>
             )}
             
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-2 md:gap-3">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -531,7 +555,7 @@ export default function ChatbotApp() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
-                className="p-3 hover:bg-neutral-800 rounded-xl transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 md:p-3 hover:bg-neutral-800 rounded-xl transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Attach images"
               >
                 <Paperclip className="w-5 h-5 text-neutral-400" />
@@ -549,14 +573,14 @@ export default function ChatbotApp() {
                 placeholder="Type your message..."
                 disabled={isLoading}
                 rows={1}
-                className="flex-1 resize-none px-4 py-3 bg-neutral-800 border border-neutral-700 text-neutral-100 placeholder-neutral-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-600 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ minHeight: '48px', maxHeight: '200px' }}
+                className="flex-1 resize-none px-3 md:px-4 py-2.5 md:py-3 bg-neutral-800 border border-neutral-700 text-neutral-100 placeholder-neutral-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-600 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
+                style={{ minHeight: '44px', maxHeight: '200px' }}
               />
 
               <button
                 onClick={handleSend}
                 disabled={(!input.trim() && files.length === 0) || isLoading}
-                className="p-3 bg-neutral-700 text-neutral-100 rounded-xl hover:bg-neutral-600 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                className="p-2 md:p-3 bg-neutral-700 text-neutral-100 rounded-xl hover:bg-neutral-600 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors flex-shrink-0"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
